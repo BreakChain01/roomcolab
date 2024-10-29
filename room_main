@@ -1,0 +1,50 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from sklearn.preprocessing import OneHotEncoder
+
+# Veri yükleme (örnek veri)
+data = pd.read_csv("ev_ozellikleri.csv", sep=";")
+
+# Özellik ve hedef değişkenlerini ayırma
+X = data[["metrekare", "konum"]]
+y = data["oda_sayisi"]
+
+# 'konum' sütununu one-hot encode etme
+ohe = OneHotEncoder()
+encoded_features = ohe.fit_transform(X[['konum']]).toarray()
+encoded_df = pd.DataFrame(encoded_features)
+X = pd.concat([X, encoded_df], axis=1)
+X = X.drop('konum', axis=1)
+print('ohe degeri:', X)
+
+# Veri kümesini eğitim ve test kümelerine ayırma
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+# Model oluşturma
+model = Sequential()
+# Giriş boyutu one-hot encoding sonrası değişebilir
+model.add(Dense(12, input_dim=X_train.shape[1], activation='relu'))
+model.add(Dense(8, activation='relu'))
+model.add(Dense(1))
+
+# Model derleme
+# Use MSE for regression problems and remove accuracy
+model.compile(loss='mean_squared_error', optimizer='adam')
+
+# Model eğitimi
+model.fit(X_train, y_train, epochs=150, batch_size=10)
+
+# Model değerlendirme
+# evaluate returns only loss since no metrics were specified
+loss = model.evaluate(X_test, y_test)
+print('Loss: %.2f' % (loss))
+
+# Yeni bir ev için tahmin
+# One-hot encoding'e dikkat edin
+new_house = np.array([[100, 0, 0, 0, 1]]) # Örnek: konum 4 için one-hot encoded değerler
+prediction = model.predict(new_house)
+print('Tahmin edilen oda sayısı:', new_house)
+print('Tahmin edilen oda sayısı:', prediction[0])
